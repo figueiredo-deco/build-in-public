@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Build in Public · deco
 
-## Getting Started
+Ferramenta interna para o time fazer build in public no LinkedIn. Três frentes:
 
-First, run the development server:
+1. **Avaliador** — cole o post (escrito no Claude, ChatGPT ou à mão), veja o preview fiel do LinkedIn com o corte do "ver mais" em mobile e desktop, e receba nota de 0 a 100 por critério, trechos fracos marcados no texto, hooks alternativos e sugestões pontuais que você aplica com um clique.
+2. **Biblioteca** — rascunhos, posts em aprovação, agendados e publicados; calendário; lembrete "hora de publicar" com copiar texto; link e métricas do post publicado; banco de ideias.
+3. **Playbook** — guia de escrita, regras do time (editáveis pelo curador e usadas na nota), posts de referência e prompts prontos para colar no Claude/ChatGPT.
+
+O design segue os tokens do design system da deco (cores, fonte Switzer, raios e sombras do decocms.com).
+
+## Rodando localmente
 
 ```bash
+npm install
+cp .env.example .env.local   # coloque sua ANTHROPIC_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sem `ANTHROPIC_API_KEY`, o Avaliador funciona em modo "regras": calcula a nota com checagens em código (corte, tamanho, hashtags, links, clichês de IA) e não gera hooks nem sugestões.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Como a nota funciona
 
-## Learn More
+| Critério | Peso |
+| --- | --- |
+| Hook (antes do corte) | 30% |
+| Clareza e estrutura | 15% |
+| Valor | 20% |
+| Autenticidade | 15% |
+| Fechamento e CTA | 10% |
+| Regras do time | 10% |
 
-To learn more about Next.js, take a look at the following resources:
+Faixas: 0–49 reescrever · 50–69 ajustar · 70–84 bom · 85+ pronto.
+A avaliação usa `claude-opus-5-5` com saída estruturada, as regras ativas do Playbook e os 3 posts de referência mais parecidos. Posts que citam cliente ou números internos vão para "Em aprovação" ao serem agendados.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/lib/evaluate.ts` — chamada ao Claude e fallback por regras
+- `src/lib/checks.ts` — regras checadas por código e nota heurística
+- `src/lib/linkedin.ts` — cálculo do corte do "ver mais" (limites aproximados, validar com prints)
+- `src/lib/seed.ts` — regras e referências iniciais (as referências são exemplos ilustrativos: troque por posts reais)
+- `src/lib/db.ts` — armazenamento em `data/db.json` (MVP; trocar por Postgres ao hospedar)
 
-## Deploy on Vercel
+## Próximos passos (do PRD)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Validar os limites do corte com prints atuais (Fase 0)
+- Login com Google Workspace e posts privados por pessoa
+- Lembrete por Slack/e-mail no horário agendado
+- Publicação direta via API do LinkedIn (Fase 4, após spike técnico)

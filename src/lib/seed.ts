@@ -1,0 +1,116 @@
+import type { DB } from "./types";
+
+// Base inicial. As referências são exemplos ilustrativos escritos para o projeto:
+// troque por posts reais do time e de criadores externos (com métricas) na Fase 0.
+export const SEED: DB = {
+  playbookVersion: 1,
+  rules: [
+    {
+      id: "r-cliente",
+      name: "Não citar cliente sem autorização",
+      description: "Nome, marca ou dado de cliente só com autorização registrada. Na dúvida, o post vai para aprovação.",
+      severity: "bloqueante",
+      check: "ia",
+      badExample: "Ontem a Loja X quase caiu na Black Friday...",
+      goodExample: "Ontem um e-commerce grande quase caiu na Black Friday...",
+      active: true,
+    },
+    {
+      id: "r-financeiro",
+      name: "Não expor números financeiros internos",
+      description: "Receita, margem, runway, salários e valores de contrato não saem sem aprovação.",
+      severity: "bloqueante",
+      check: "ia",
+      active: true,
+    },
+    {
+      id: "r-hook",
+      name: "Hook cabe antes do corte",
+      description: "A ideia principal do hook precisa aparecer antes do \"...ver mais\" no mobile.",
+      severity: "forte",
+      check: "codigo",
+      active: true,
+    },
+    {
+      id: "r-hashtags",
+      name: "No máximo 3 hashtags",
+      description: "Hashtags demais parecem spam e não aumentam alcance.",
+      severity: "recomendacao",
+      check: "codigo",
+      active: true,
+    },
+    {
+      id: "r-link",
+      name: "Link externo vai no primeiro comentário",
+      description: "Links no corpo do post reduzem alcance. Use o primeiro comentário.",
+      severity: "recomendacao",
+      check: "codigo",
+      active: true,
+    },
+    {
+      id: "r-cliches",
+      name: "Evitar clichês de IA",
+      description: "Expressões que denunciam texto gerado por IA tiram a credibilidade.",
+      severity: "forte",
+      check: "codigo",
+      badExample: "No mundo acelerado de hoje, a inovação é a chave para o sucesso.",
+      active: true,
+    },
+    {
+      id: "r-tamanho",
+      name: "Entre 400 e 2.200 caracteres",
+      description: "Curto demais não entrega valor; longo demais perde leitura. O limite do LinkedIn é 3.000.",
+      severity: "recomendacao",
+      check: "codigo",
+      active: true,
+    },
+    {
+      id: "r-bastidor",
+      name: "Mostrar bastidor real",
+      description: "Build in public = processo, número, erro ou decisão real. Evite só opinião genérica.",
+      severity: "forte",
+      check: "ia",
+      active: true,
+    },
+  ],
+  references: [
+    {
+      id: "ref-1",
+      author: "Exemplo ilustrativo",
+      format: "texto",
+      tags: ["número", "bastidor", "produto"],
+      text:
+        "Deletamos 40% do código do nosso produto em uma semana.\n\nE a conversão subiu.\n\nO que aconteceu:\n\n→ Mapeamos quais telas ninguém abria há 90 dias\n→ Removemos 11 de 27 fluxos\n→ O onboarding caiu de 9 para 4 passos\n\nResultado em 30 dias: ativação de 31% para 44%.\n\nA lição que ficou: cada feature que ninguém usa cobra juros de quem usa.\n\nQual feature do seu produto você teria coragem de apagar?",
+      impressions: 48000,
+      comments: 212,
+      why: "Hook com número e contraste antes do corte; lista curta; resultado concreto; pergunta no fim.",
+      approved: true,
+    },
+    {
+      id: "ref-2",
+      author: "Exemplo ilustrativo",
+      format: "imagem",
+      tags: ["erro", "confissão", "engenharia"],
+      text:
+        "Eu derrubei a produção numa sexta às 18h.\n\nFoi um deploy de 3 linhas.\n\nO que eu aprendi nas 2 horas seguintes vale mais que muito curso:\n\n1. Rollback precisa ser um botão, não um runbook\n2. \"É só uma mudança pequena\" é a frase mais cara da engenharia\n3. Post-mortem sem culpado faz o time contar a verdade\n\nHoje temos deploy bloqueado depois das 16h de sexta. Ninguém reclamou.",
+      impressions: 31000,
+      comments: 96,
+      why: "Confissão gera empatia; hook curto; lista numerada; mudança concreta no final.",
+      approved: true,
+    },
+    {
+      id: "ref-3",
+      author: "Exemplo ilustrativo",
+      format: "carrossel",
+      tags: ["métrica", "semana", "build in public"],
+      text:
+        "Semana 12 construindo em público. Os números, sem filtro:\n\n• 1.204 usuários ativos (+18%)\n• 3 clientes pagantes novos\n• 1 churn que doeu\n\nO churn veio de uma promessa que eu fiz e o produto não cumpriu.\n\nNo carrossel: o que eu mudei no pitch e no roadmap por causa disso.",
+      impressions: 22000,
+      comments: 74,
+      why: "Série recorrente cria hábito; transparência com número ruim gera confiança.",
+      approved: true,
+    },
+  ],
+  posts: [],
+  ideas: [],
+};
