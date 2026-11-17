@@ -12,13 +12,18 @@ O design segue os tokens do design system da deco (cores, fonte Switzer, raios e
 
 ```bash
 npm install
-cp .env.example .env.local   # coloque sua ANTHROPIC_API_KEY
+cp .env.example .env.local
 npm run dev
 ```
 
 Abra http://localhost:3000.
 
-Sem `ANTHROPIC_API_KEY`, o Avaliador funciona em modo "regras": calcula a nota com checagens em código (corte, tamanho, hashtags, links, clichês de IA) e não gera hooks nem sugestões.
+### De onde vem a IA (escolha uma)
+
+- **Sua assinatura Claude (uso pessoal, local):** rode `claude setup-token`, faça o login e cole o token em `CLAUDE_CODE_OAUTH_TOKEN` no `.env.local`. O Avaliador chama o Claude pelo Claude Agent SDK e consome o limite do seu plano. Cada pessoa usa a própria assinatura.
+- **Chave de API (para hospedar para o time):** crie em platform.claude.com e coloque em `ANTHROPIC_API_KEY`.
+
+Se as duas estiverem preenchidas, a assinatura tem prioridade. Sem nenhuma, o Avaliador funciona em modo "regras": calcula a nota com checagens em código (corte, tamanho, hashtags, links, clichês de IA) e não gera hooks nem sugestões.
 
 ## Como a nota funciona
 

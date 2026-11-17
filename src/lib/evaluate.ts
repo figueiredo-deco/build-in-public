@@ -125,6 +125,74 @@ function imageBlocks(images: string[]): Anthropic.Beta.BetaImageBlockParam[] {
   return out;
 }
 
+type Output = z.infer<typeof OutputSchema>;
+
+/** JSON Schema sem o campo $schema (o Claude Code não resolve a URL do draft 2020-12). */
+function jsonSchema(): Record<string, unknown> {
+  const { $schema: _ignored, ...schema } = z.toJSONSchema(OutputSchema) as Record<string, unknown>;
+  return schema;
+}
+
+/** Modo API: chave da Anthropic (ANTHROPIC_API_KEY). */
+async function runWithApiKey(system: string, content: Anthropic.Beta.BetaContentBlockParam[]): Promise<{ out: Output; model: string }> {
+  const client = new Anthropic();
+  const response = await client.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 16000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "medium", format: betaZodOutputFormat(OutputSchema) },
+    system,
+    messages: [{ role: "user", content }],
+  });
+  if (response.stop_reason === "refusal") throw new Error("O modelo recusou avaliar este post.");
+  if (!response.parsed_output) throw new Error("Resposta da IA veio sem o formato esperado.");
+  return { out: response.parsed_output, model: response.model ?? MODEL };
+}
+
+/**
+ * Modo assinatura: usa o limite do seu plano Claude via Claude Agent SDK.
+ * Gere o token com `claude setup-token` e coloque em CLAUDE_CODE_OAUTH_TOKEN.
+ * Uso pessoal/local: cada pessoa roda com a própria assinatura.
+ */
+async function runWithSubscription(system: string, content: Anthropic.Beta.BetaContentBlockParam[]): Promise<{ out: Output; model: string }> {
+  const { query } = await import("@anthropic-ai/claude-agent-sdk");
+  // Garante que o Claude Code use o token da assinatura, não uma chave de API vazia.
+  const env: Record<string, string | undefined> = { ...process.env };
+  delete env.ANTHROPIC_API_KEY;
+  async function* prompt() {
+    yield {
+      type: "user" as const,
+      message: { role: "user" as const, content: content as Anthropic.ContentBlockParam[] },
+      parent_tool_use_id: null,
+    };
+  }
+  let model = MODEL;
+  for await (const msg of query({
+    prompt: prompt(),
+    options: {
+      model: MODEL,
+      systemPrompt: system,
+      tools: [],
+      maxTurns: 4,
+      effort: "medium",
+      settingSources: [],
+      persistSession: false,
+      env,
+      outputFormat: { type: "json_schema", schema: jsonSchema() },
+    },
+  })) {
+    if (msg.type === "system" && msg.subtype === "init") model = msg.model ?? MODEL;
+    if (msg.type === "result") {
+      if (msg.subtype !== "success") throw new Error(`O Claude não concluiu a avaliação (${msg.subtype}).`);
+      const parsed = OutputSchema.safeParse(msg.structured_output);
+      if (!parsed.success) throw new Error("Resposta da IA veio sem o formato esperado.");
+      return { out: parsed.data, model: `${model} · assinatura` };
+    }
+  }
+  throw new Error("O Claude Code encerrou sem resposta.");
+}
+
 export interface EvaluateResult {
   evaluation: Evaluation;
   notice?: string;
@@ -145,32 +213,19 @@ export async function evaluateDraft(draft: PostDraft): Promise<EvaluateResult> {
     playbookVersion: db.playbookVersion,
   };
 
-  try {
-    const client = new Anthropic();
-    const response = await client.beta.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      output_config: { effort: "medium", format: betaZodOutputFormat(OutputSchema) },
-      system: systemPrompt(db.rules, refs, lang),
-      messages: [
-        {
-          role: "user",
-          content: [
-            ...imageBlocks(draft.images),
-            {
-              type: "text",
-              text: `${describeDraft(draft)}\n\n<hook_antes_do_corte_mobile>\n${cut.visible}\n</hook_antes_do_corte_mobile>\n\n<post>\n${draft.text}\n</post>\n\nProblemas já detectados por código (considere na nota de "regras"):\n${codeViolations.map((v) => `- ${v.ruleName}: ${v.message}`).join("\n") || "(nenhum)"}`,
-            },
-          ],
-        },
-      ],
-    });
+  const system = systemPrompt(db.rules, refs, lang);
+  const content: Anthropic.Beta.BetaContentBlockParam[] = [
+    ...imageBlocks(draft.images),
+    {
+      type: "text",
+      text: `${describeDraft(draft)}\n\n<hook_antes_do_corte_mobile>\n${cut.visible}\n</hook_antes_do_corte_mobile>\n\n<post>\n${draft.text}\n</post>\n\nProblemas já detectados por código (considere na nota de "regras"):\n${codeViolations.map((v) => `- ${v.ruleName}: ${v.message}`).join("\n") || "(nenhum)"}`,
+    },
+  ];
 
-    if (response.stop_reason === "refusal") throw new Error("O modelo recusou avaliar este post.");
-    const out = response.parsed_output;
-    if (!out) throw new Error("Resposta da IA veio sem o formato esperado.");
+  try {
+    const { out, model } = process.env.CLAUDE_CODE_OAUTH_TOKEN
+      ? await runWithSubscription(system, content)
+      : await runWithApiKey(system, content);
 
     const criteria: CriterionResult[] = CRITERIA.map((c) => {
       const found = out.criteria.find((x) => x.key === c.key);
@@ -199,7 +254,7 @@ export async function evaluateDraft(draft: PostDraft): Promise<EvaluateResult> {
         suggestions: out.suggestions.filter((s) => draft.text.includes(s.before)).slice(0, 5),
         violations: [...codeViolations, ...aiViolations],
         sensitive: out.sensitive,
-        model: response.model ?? MODEL,
+        model,
       },
     };
   } catch (error) {
@@ -208,7 +263,7 @@ export async function evaluateDraft(draft: PostDraft): Promise<EvaluateResult> {
     else if (error instanceof Anthropic.RateLimitError) notice += " A API da Anthropic limitou as chamadas; tente de novo em instantes.";
     else if (error instanceof Anthropic.APIError) notice += ` Erro da API (${error.status ?? "rede"}).`;
     else if (error instanceof Error && /api key|apiKey|credentials|authentication/i.test(error.message))
-      notice += " Configure ANTHROPIC_API_KEY no .env.local para usar o Claude.";
+      notice += " Configure CLAUDE_CODE_OAUTH_TOKEN (sua assinatura, via `claude setup-token`) ou ANTHROPIC_API_KEY no .env.local para usar o Claude.";
     else if (error instanceof Error) notice += ` ${error.message}`;
     console.error("[avaliador]", error);
 
