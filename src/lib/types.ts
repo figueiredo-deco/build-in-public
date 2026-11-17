@@ -22,9 +22,18 @@ export const STATUS_LABEL: Record<PostStatus, string> = {
 
 export type Goal = "alcance" | "autoridade" | "leads" | "recrutar";
 
+/** Onde o post sai: perfil pessoal ou página da empresa (company page). */
+export type Channel = "pessoal" | "empresa";
+
+export const CHANNEL_LABEL: Record<Channel, string> = {
+  pessoal: "Perfil pessoal",
+  empresa: "Página da empresa",
+};
+
 export interface PostDraft {
   text: string;
   format: PostFormat;
+  channel?: Channel;
   images: string[]; // data URLs
   firstComment?: string;
   goal?: Goal;
@@ -144,6 +153,8 @@ export interface Idea {
 
 export interface DB {
   playbookVersion: number;
+  /** Regras do seed já aplicadas, para novas regras chegarem a bancos existentes sem ressuscitar as apagadas. */
+  appliedSeedRules?: string[];
   rules: Rule[];
   references: ReferencePost[];
   posts: Post[];

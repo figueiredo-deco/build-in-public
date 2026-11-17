@@ -76,7 +76,7 @@ function weighted(criteria: CriterionResult[]) {
 }
 
 function describeDraft(draft: PostDraft) {
-  const parts = [`Formato: ${FORMAT_LABEL[draft.format]}`];
+  const parts = [`Formato: ${FORMAT_LABEL[draft.format]}`, `Canal: ${draft.channel === "empresa" ? "página da empresa (company page)" : "perfil pessoal"}`];
   if (draft.goal) parts.push(`Objetivo: ${draft.goal}`);
   if (draft.audience) parts.push(`Público: ${draft.audience}`);
   if (draft.articleTitle) parts.push(`Título do artigo: ${draft.articleTitle}`);
@@ -103,7 +103,8 @@ ${crit}
 - Em "highlights" e em "suggestions.before", copie trechos EXATOS do post (o app localiza o texto por busca literal). Aponte no máximo 2 trechos por critério.
 - Sugestões são pontuais (antes/depois), no máximo 5, e preservam a voz do autor. Nunca reescreva o post inteiro.
 - Os 3 hooks alternativos precisam caber antes do corte no mobile e soar como o autor, não como IA.
-- Escreva todo o feedback em português do Brasil. Hooks e sugestões ficam no idioma do post (${lang === "en" ? "inglês" : "português"}).
+- Escreva todo o feedback em português do Brasil. Hooks e sugestões ficam no idioma do post (${lang === "en" ? "inglês" : "português"}), exceto quando o canal for a página da empresa: aí hooks e sugestões são sempre em inglês.
+- Um post usa um idioma só. Página da empresa: sempre inglês.
 
 Regras do Playbook do time:
 ${ruleText}

@@ -2,7 +2,7 @@
 
 Ferramenta interna para o time fazer build in public no LinkedIn. Três frentes:
 
-1. **Avaliador** — cole o post (escrito no Claude, ChatGPT ou à mão), veja o preview fiel do LinkedIn com o corte do "ver mais" em mobile e desktop, e receba nota de 0 a 100 por critério, trechos fracos marcados no texto, hooks alternativos e sugestões pontuais que você aplica com um clique.
+1. **Avaliador** — cole o post (escrito no Claude, ChatGPT ou à mão) e escolha o canal (perfil pessoal ou página da empresa). Depois de avaliar, a tela mostra só o preview do LinkedIn, centralizado, com o corte do "ver mais" e caixinhas ao lado de cada trecho: comentários por critério, hooks alternativos e sugestões que você aplica ou desfaz vendo a mudança no preview. Depois é só reavaliar.
 2. **Biblioteca** — rascunhos, posts em aprovação, agendados e publicados; calendário; lembrete "hora de publicar" com copiar texto; link e métricas do post publicado; banco de ideias.
 3. **Playbook** — guia de escrita, regras do time (editáveis pelo curador e usadas na nota), posts de referência e prompts prontos para colar no Claude/ChatGPT.
 

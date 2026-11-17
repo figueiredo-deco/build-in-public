@@ -1,99 +1,125 @@
 "use client";
 import { Globe02, MessageSquare01, Repeat01, Send01, ThumbsUp } from "@untitledui/icons";
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { computeCut, type Device } from "@/lib/linkedin";
-import type { Highlight, PostDraft } from "@/lib/types";
+import type { PostDraft } from "@/lib/types";
+import { DecoLogo } from "./DecoLogo";
 import { initials, useProfile } from "./useProfile";
+
+/** Um trecho do texto marcado no preview, ligado a uma caixinha de comentário. */
+export interface Mark {
+  id: string;
+  start: number;
+  end: number;
+  kind: "issue" | "pending" | "applied" | "hook";
+}
 
 interface Props {
   draft: PostDraft;
   device: Device;
-  highlights?: Highlight[];
-  activeQuote?: string | null;
+  marks?: Mark[];
+  activeId?: string | null;
+  onMarkHover?: (id: string | null) => void;
+  /** Mostra o texto inteiro com a linha do corte; false mostra como no feed. */
+  expanded?: boolean;
 }
 
-type Seg = { text: string; mark?: boolean; active?: boolean };
+const PRIORITY: Record<Mark["kind"], number> = { applied: 0, pending: 1, hook: 2, issue: 3 };
 
-function segments(text: string, highlights: Highlight[], activeQuote?: string | null): Seg[] {
-  const ranges: { start: number; end: number; active: boolean }[] = [];
-  for (const h of highlights) {
-    const start = text.indexOf(h.quote);
-    if (start < 0 || !h.quote) continue;
-    const end = start + h.quote.length;
-    if (ranges.some((r) => start < r.end && end > r.start)) continue;
-    ranges.push({ start, end, active: h.quote === activeQuote });
+const KIND_CLASS: Record<Mark["kind"], string> = {
+  issue: "bg-warning/12 underline decoration-warning/70 decoration-dotted underline-offset-4",
+  hook: "bg-special/10 underline decoration-special/60 decoration-dotted underline-offset-4",
+  pending: "bg-notice/10 underline decoration-notice/60 decoration-dashed underline-offset-4",
+  applied: "bg-success/15 bip-flash",
+};
+
+type Piece = { type: "text"; text: string; mark?: Mark } | { type: "cut" };
+
+/** Quebra o texto em pedaços marcados/não marcados e insere a linha do corte. */
+function pieces(text: string, marks: Mark[], cutIndex: number | null): Piece[] {
+  const chosen: Mark[] = [];
+  for (const m of [...marks].sort((a, b) => PRIORITY[a.kind] - PRIORITY[b.kind])) {
+    if (m.start < 0 || m.end <= m.start || m.end > text.length) continue;
+    if (chosen.some((c) => m.start < c.end && m.end > c.start)) continue;
+    chosen.push(m);
   }
-  ranges.sort((a, b) => a.start - b.start);
-  const out: Seg[] = [];
-  let pos = 0;
-  for (const r of ranges) {
-    if (r.start > pos) out.push({ text: text.slice(pos, r.start) });
-    out.push({ text: text.slice(r.start, r.end), mark: true, active: r.active });
-    pos = r.end;
+  chosen.sort((a, b) => a.start - b.start);
+  const cuts = new Set<number>([0, text.length]);
+  for (const m of chosen) cuts.add(m.start).add(m.end);
+  if (cutIndex !== null) cuts.add(cutIndex);
+  const points = [...cuts].sort((a, b) => a - b);
+  const out: Piece[] = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const [a, b] = [points[i], points[i + 1]];
+    if (cutIndex === a && a > 0) out.push({ type: "cut" });
+    const mark = chosen.find((m) => m.start <= a && m.end >= b);
+    out.push({ type: "text", text: text.slice(a, b), mark });
   }
-  if (pos < text.length) out.push({ text: text.slice(pos) });
   return out;
 }
 
-function Rich({ segs }: { segs: Seg[] }) {
-  return (
-    <>
-      {segs.map((s, i) =>
-        s.mark ? (
-          <mark
-            key={i}
-            className={`rounded-[3px] px-0.5 ${s.active ? "bg-brand text-brand-foreground" : "bg-warning/15 text-inherit underline decoration-warning decoration-dotted underline-offset-4"}`}
-          >
-            {s.text}
-          </mark>
-        ) : (
-          <span key={i}>{s.text}</span>
-        ),
-      )}
-    </>
-  );
-}
-
-export function LinkedInPreview({ draft, device, highlights = [], activeQuote }: Props) {
+export const LinkedInPreview = forwardRef<HTMLDivElement, Props>(function LinkedInPreview(
+  { draft, device, marks = [], activeId, onMarkHover, expanded = false },
+  ref,
+) {
   const { profile } = useProfile();
-  const [expanded, setExpanded] = useState(false);
+  const [openInFeed, setOpenInFeed] = useState(false);
   const isArticle = draft.format === "artigo";
   const cut = useMemo(() => computeCut(draft.text, device), [draft.text, device]);
   const width = device === "mobile" ? "max-w-[375px]" : "max-w-[555px]";
-  const visibleSegs = segments(cut.visible, highlights, activeQuote);
-  const hiddenSegs = segments(draft.text.slice(cut.index), highlights, activeQuote);
+  const showAll = expanded || openInFeed || !cut.truncated;
+  const text = showAll ? draft.text : cut.visible;
+  const list = pieces(text, marks, expanded && cut.truncated ? cut.index : null);
+  const isCompany = draft.channel === "empresa";
 
   return (
-    <div className={`${width} w-full mx-auto overflow-hidden rounded-lg bg-white shadow-edge`} style={{ fontFamily: "-apple-system, system-ui, 'Segoe UI', Roboto, sans-serif" }}>
+    <div ref={ref} className={`${width} w-full overflow-hidden rounded-lg bg-white card-shadow`} style={{ fontFamily: "-apple-system, system-ui, 'Segoe UI', Roboto, sans-serif" }}>
       <div className="flex gap-2 px-4 pt-3">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">{initials(profile.name)}</div>
+        {isCompany ? (
+          <div className="grid size-12 shrink-0 place-items-center rounded-md bg-[#0a0a09]">
+            <DecoLogo className="h-4 w-auto" />
+          </div>
+        ) : (
+          <div className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-sm font-semibold text-brand-foreground">{initials(profile.name)}</div>
+        )}
         <div className="min-w-0 leading-tight">
-          <div className="text-sm font-semibold text-[#191919]">{profile.name}</div>
-          <div className="truncate text-xs text-[#666]">{profile.headline}</div>
-          <div className="flex items-center gap-1 text-xs text-[#666]">agora · <Globe02 className="size-3" /></div>
+          <div className="text-sm font-semibold text-[#191919]">{isCompany ? "deco.cx" : profile.name}</div>
+          <div className="truncate text-xs text-[#666]">{isCompany ? "Página da empresa" : profile.headline}</div>
+          <div className="flex items-center gap-1 text-xs text-[#666]">
+            agora · <Globe02 className="size-3" />
+          </div>
         </div>
       </div>
 
       {!isArticle && draft.text && (
-        <div className="relative px-4 pt-2 pb-1 text-[14px] leading-[20px] text-[#191919] whitespace-pre-wrap break-words">
-          <Rich segs={visibleSegs} />
-          {cut.truncated && !expanded && (
-            <>
-              <span className="text-[#666]">…</span>{" "}
-              <button onClick={() => setExpanded(true)} className="text-[#666] hover:text-link hover:underline">
-                {device === "mobile" ? "mais" : "ver mais"}
-              </button>
-            </>
-          )}
-          {cut.truncated && expanded && (
-            <>
-              <span className="my-1 flex items-center gap-2 text-[11px] font-medium text-warning" style={{ fontFamily: "var(--font-sans)" }}>
+        <div className="px-4 pt-2 pb-1 text-[14px] leading-[20px] whitespace-pre-wrap break-words text-[#191919]">
+          {list.map((p, i) =>
+            p.type === "cut" ? (
+              <span key={`cut-${i}`} className="my-1.5 flex items-center gap-2 text-[11px] font-medium whitespace-nowrap text-warning" style={{ fontFamily: "var(--font-sans)" }}>
                 <span className="h-px flex-1 border-t border-dashed border-warning" />
-                corte do “ver mais” ({device})
+                corte do “ver mais” no {device}
                 <span className="h-px flex-1 border-t border-dashed border-warning" />
               </span>
-              <Rich segs={hiddenSegs} />
-              <button onClick={() => setExpanded(false)} className="mt-1 block text-[#666] hover:underline">ver menos</button>
+            ) : p.mark ? (
+              <mark
+                key={`${p.mark.id}-${i}`}
+                data-anno={p.mark.id}
+                onMouseEnter={() => onMarkHover?.(p.mark!.id)}
+                onMouseLeave={() => onMarkHover?.(null)}
+                className={`rounded-[3px] px-px text-inherit transition-[background-color,box-shadow] duration-200 ${KIND_CLASS[p.mark.kind]} ${activeId === p.mark.id ? "ring-2 ring-foreground/25" : ""}`}
+              >
+                {p.text}
+              </mark>
+            ) : (
+              <span key={i}>{p.text}</span>
+            ),
+          )}
+          {!expanded && cut.truncated && (
+            <>
+              {!openInFeed && <span className="text-[#666]">… </span>}
+              <button onClick={() => setOpenInFeed((o) => !o)} className="text-[#666] hover:text-link hover:underline">
+                {openInFeed ? " ver menos" : device === "mobile" ? "mais" : "ver mais"}
+              </button>
             </>
           )}
         </div>
@@ -115,16 +141,18 @@ export function LinkedInPreview({ draft, device, highlights = [], activeQuote }:
       </div>
       {draft.firstComment && (
         <div className="flex gap-2 px-4 pb-3">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand text-[10px] font-semibold text-brand-foreground">{initials(profile.name)}</div>
+          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-brand text-[10px] font-semibold text-brand-foreground">{isCompany ? "d" : initials(profile.name)}</div>
           <div className="rounded-lg bg-[#f2f2f2] px-3 py-2 text-[13px] text-[#191919]">
-            <div className="text-xs font-semibold">{profile.name} <span className="font-normal text-[#666]">· Autor</span></div>
+            <div className="text-xs font-semibold">
+              {isCompany ? "deco.cx" : profile.name} <span className="font-normal text-[#666]">· Autor</span>
+            </div>
             <div className="whitespace-pre-wrap break-words">{draft.firstComment}</div>
           </div>
         </div>
       )}
     </div>
   );
-}
+});
 
 function Media({ draft }: { draft: PostDraft }) {
   const [page, setPage] = useState(0);
@@ -136,7 +164,9 @@ function Media({ draft }: { draft: PostDraft }) {
         <div className="font-semibold text-[#191919]">{draft.pollQuestion || "Pergunta da enquete"}</div>
         <div className="mb-2 text-xs text-[#666]">Você pode ver como as pessoas votam.</div>
         {(opts.length ? opts : ["Opção 1", "Opção 2"]).map((o, i) => (
-          <div key={i} className="mb-2 rounded-full border border-[#0a66c2] px-3 py-1.5 text-center font-semibold text-[#0a66c2]">{o}</div>
+          <div key={i} className="mb-2 rounded-full border border-[#0a66c2] px-3 py-1.5 text-center font-semibold text-[#0a66c2]">
+            {o}
+          </div>
         ))}
       </div>
     );
@@ -172,7 +202,7 @@ function Media({ draft }: { draft: PostDraft }) {
     return (
       <div className="relative mt-2">
         <img src={imgs[0]} alt="" className="aspect-video w-full object-cover" />
-        <span className="absolute inset-0 m-auto grid h-12 w-12 place-items-center rounded-full bg-black/60 text-white">▶</span>
+        <span className="absolute inset-0 m-auto grid size-12 place-items-center rounded-full bg-black/60 text-white">▶</span>
       </div>
     );
   }

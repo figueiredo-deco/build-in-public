@@ -3,3 +3,10 @@
 @import "@decocms/ui/styles/global.css";
 
 @source "../";
+
+/* Destaque rápido quando uma sugestão é aplicada no preview. */
+@keyframes bip-flash {
+  0% { background-color: color-mix(in oklab, var(--success) 45%, transparent); }
+  100% { background-color: color-mix(in oklab, var(--success) 15%, transparent); }
+}
+.bip-flash { animation: bip-flash 900ms ease-out; }

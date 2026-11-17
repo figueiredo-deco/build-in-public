@@ -110,6 +110,26 @@ function Guide() {
         </Card>
       </section>
       <section className="flex flex-col gap-3">
+        <h2 className="text-base font-medium">Regras de ouro</h2>
+        <Card className="gap-0 overflow-hidden">
+          <ul className="divide-y divide-border text-sm">
+            {[
+              ["Um idioma por post", "Nunca misture português e inglês no mesmo texto."],
+              ["Página da empresa em inglês", "A company page fala com o mercado global. Perfis pessoais escolhem o idioma do seu público."],
+              ["No máximo 1 post por dia", "Mais que isso divide o alcance entre os posts."],
+              ["Não edite depois de publicar", "A edição prejudica a entrega do algoritmo. Revise antes."],
+              ["Respeite a escolha de quem lê", "Não diminua quem usa outra solução ou tem time interno: pode ser cliente."],
+              ["Fale com quem compra", "Nossos clientes são Millennials e Gen X. Conteúdo sóbrio e reputacional também é necessário."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex flex-col gap-0.5 px-5 py-3">
+                <span className="font-medium">{t}</span>
+                <span className="text-muted-foreground">{d}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </section>
+      <section className="flex flex-col gap-3">
         <h2 className="text-base font-medium">Anatomia de um bom post</h2>
         <Card className="gap-0 overflow-hidden">
           <ol className="divide-y divide-border text-sm">

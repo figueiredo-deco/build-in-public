@@ -106,7 +106,7 @@ export function Library() {
                 <div className="flex w-full flex-col gap-2">
                   <AlertTitle>Hora de publicar</AlertTitle>
                   {due.map((p) => (
-                    <DueRow key={p.id} post={p} onPublished={(url) => patch(p.id, { status: "publicado", publishedUrl: url || undefined }).then(() => toast.success("Marcado como publicado."))} />
+                    <DueRow key={p.id} post={p} onPublished={(url) => patch(p.id, { status: "publicado", publishedUrl: url || undefined }).then(() => toast.success("Marcado como publicado. Não edite o post no LinkedIn agora: isso derruba a entrega."))} />
                   ))}
                 </div>
               </Alert>

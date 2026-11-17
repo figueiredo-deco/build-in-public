@@ -13,12 +13,29 @@ let queue: Promise<unknown> = Promise.resolve();
 export async function readDB(): Promise<DB> {
   try {
     const raw = await fs.readFile(DB_FILE, "utf8");
-    return JSON.parse(raw) as DB;
+    return withSeedRules(JSON.parse(raw) as DB);
   } catch {
     await fs.mkdir(DATA_DIR, { recursive: true });
     await fs.writeFile(DB_FILE, JSON.stringify(SEED, null, 2));
     return structuredClone(SEED);
   }
+}
+
+/** Adiciona regras novas do seed a um banco existente (só uma vez por regra). */
+function withSeedRules(db: DB): DB {
+  const applied = new Set(db.appliedSeedRules ?? db.rules.map((r) => r.id));
+  let added = 0;
+  for (const rule of SEED.rules) {
+    if (applied.has(rule.id)) continue;
+    if (!db.rules.some((r) => r.id === rule.id)) {
+      db.rules.push(structuredClone(rule));
+      added += 1;
+    }
+    applied.add(rule.id);
+  }
+  db.appliedSeedRules = [...applied];
+  if (added) db.playbookVersion += 1;
+  return db;
 }
 
 /** Lê, aplica a mudança e grava, em fila, para não perder escritas concorrentes. */
