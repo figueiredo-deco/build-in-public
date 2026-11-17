@@ -2,72 +2,114 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BookOpen, Library, Sparkles, UserRound } from "lucide-react";
+import { BookOpen01, Grid01, Stars02 } from "@untitledui/icons";
+import { Avatar } from "@decocms/ui/components/avatar";
+import { Button } from "@decocms/ui/components/button";
+import { Input } from "@decocms/ui/components/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@decocms/ui/components/popover";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@decocms/ui/components/sidebar";
 import { DecoLogo } from "./DecoLogo";
-import { initials, useProfile } from "./useProfile";
+import { Field, SimpleSelect } from "./ui";
+import { useProfile, type Profile } from "./useProfile";
 
 const NAV = [
-  { href: "/", label: "Avaliador", icon: Sparkles },
-  { href: "/biblioteca", label: "Biblioteca", icon: Library },
-  { href: "/playbook", label: "Playbook", icon: BookOpen },
+  { href: "/", label: "Avaliador", icon: Stars02 },
+  { href: "/biblioteca", label: "Biblioteca", icon: Grid01 },
+  { href: "/playbook", label: "Playbook", icon: BookOpen01 },
 ];
 
-export function Sidebar() {
+export function AppSidebar() {
   const path = usePathname();
   const { profile, save } = useProfile();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(profile);
+  const [draft, setDraft] = useState<Profile>(profile);
+  const [open, setOpen] = useState(false);
 
   return (
-    <aside className="flex md:h-screen md:w-60 shrink-0 flex-row md:flex-col gap-1 border-b md:border-b-0 md:border-r border-border bg-sidebar px-3 py-3 md:py-5 md:sticky md:top-0 items-center md:items-stretch">
-      <Link href="/" className="flex items-center gap-2 px-2 md:mb-6">
-        <DecoLogo />
-        <span className="text-sm font-semibold tracking-tight hidden sm:inline">build in public</span>
-      </Link>
-      <nav className="flex md:flex-col gap-1 ml-auto md:ml-0">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active = href === "/" ? path === "/" : path.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-2.5 rounded-[0.625rem] px-2.5 py-2 text-sm transition-colors ${
-                active ? "bg-secondary-hover font-medium text-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              }`}
-            >
-              <Icon size={16} strokeWidth={1.75} />
-              <span className="hidden sm:inline">{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-      <div className="mt-auto hidden md:block">
-        {editing ? (
-          <div className="surface p-3 space-y-2">
-            <input className="field" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Nome" />
-            <input className="field" value={draft.headline} onChange={(e) => setDraft({ ...draft, headline: e.target.value })} placeholder="Headline do LinkedIn" />
-            <select className="field" value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value as "autor" | "curador" })}>
-              <option value="autor">Autor</option>
-              <option value="curador">Curador</option>
-            </select>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" onClick={() => { save(draft); setEditing(false); }}>Salvar</button>
-              <button className="btn btn-ghost" onClick={() => setEditing(false)}>Cancelar</button>
+    <Sidebar variant="inset">
+      <SidebarHeader>
+        <Link href="/" className="flex h-9 items-center gap-2 px-2">
+          <DecoLogo className="h-5 w-auto" />
+          <span className="text-sm font-medium">build in public</span>
+        </Link>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {NAV.map(({ href, label, icon: Icon }) => {
+                const active = href === "/" ? path === "/" : path.startsWith(href);
+                return (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton asChild isActive={active} tooltip={label}>
+                      <Link href={href}>
+                        <Icon />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <Popover
+          open={open}
+          onOpenChange={(o) => {
+            setOpen(o);
+            if (o) setDraft(profile);
+          }}
+        >
+          <PopoverTrigger asChild>
+            <SidebarMenuButton size="lg" className="h-11">
+              <Avatar shape="circle" size="xs" fallback={profile.name} />
+              <span className="min-w-0 text-left leading-tight">
+                <span className="block truncate text-sm font-medium">{profile.name}</span>
+                <span className="block text-meta">{profile.role === "curador" ? "Curador" : "Autor"}</span>
+              </span>
+            </SidebarMenuButton>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" className="w-72">
+            <div className="flex flex-col gap-3">
+              <Field label="Nome">
+                <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+              </Field>
+              <Field label="Headline do LinkedIn" hint="Aparece no preview do post.">
+                <Input value={draft.headline} onChange={(e) => setDraft({ ...draft, headline: e.target.value })} />
+              </Field>
+              <Field label="Papel" hint="Só o curador aprova posts e edita o Playbook.">
+                <SimpleSelect
+                  value={draft.role}
+                  onValueChange={(role) => setDraft({ ...draft, role })}
+                  options={[
+                    { value: "autor", label: "Autor" },
+                    { value: "curador", label: "Curador" },
+                  ]}
+                />
+              </Field>
+              <Button
+                onClick={() => {
+                  save(draft);
+                  setOpen(false);
+                }}
+              >
+                Salvar perfil
+              </Button>
             </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => { setDraft(profile); setEditing(true); }}
-            className="flex w-full items-center gap-2.5 rounded-[0.625rem] px-2 py-2 text-left hover:bg-secondary"
-          >
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-brand text-xs font-semibold text-brand-foreground">{initials(profile.name)}</span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{profile.name}</span>
-              <span className="flex items-center gap-1 text-xs text-muted-foreground"><UserRound size={11} />{profile.role === "curador" ? "Curador" : "Autor"}</span>
-            </span>
-          </button>
-        )}
-      </div>
-    </aside>
+          </PopoverContent>
+        </Popover>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

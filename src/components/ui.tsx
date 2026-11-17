@@ -1,111 +1,189 @@
 "use client";
+import type { ReactNode } from "react";
+import { Badge } from "@decocms/ui/components/badge";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@decocms/ui/components/breadcrumb";
+import { Label } from "@decocms/ui/components/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@decocms/ui/components/select";
+import { SidebarTrigger } from "@decocms/ui/components/sidebar";
+import { cn } from "@decocms/ui/lib/utils";
 import type { Evaluation, PostStatus, RuleSeverity } from "@/lib/types";
 import { STATUS_LABEL } from "@/lib/types";
 
-export function scoreColor(score: number) {
-  if (score >= 85) return "var(--success)";
-  if (score >= 70) return "var(--brand-soft)";
-  if (score >= 50) return "var(--warning)";
-  return "var(--destructive)";
+/* ---------- Página (segue o padrão Page do Studio) ---------- */
+
+const WIDTH = { reading: "max-w-[720px]", standard: "max-w-[1024px]", wide: "max-w-[1200px]", fluid: "max-w-none" } as const;
+
+/** Cabeçalho com breadcrumb (sem h1 repetindo a rota) e ações à direita. */
+export function PageHeader({ crumb, actions, toolbar }: { crumb: ReactNode; actions?: ReactNode; toolbar?: ReactNode }) {
+  return (
+    <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur md:rounded-t-xl">
+      <SidebarTrigger className="md:hidden" />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage className="font-medium">{crumb}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+      {toolbar && <div className="ml-3 hidden sm:block">{toolbar}</div>}
+      <div className="ml-auto flex items-center gap-2">{actions}</div>
+    </header>
+  );
 }
 
-export function ScoreRing({ score, size = 96 }: { score: number; size?: number }) {
-  const r = size / 2 - 6;
+export function PageContainer({ width = "wide", className, children }: { width?: keyof typeof WIDTH; className?: string; children: ReactNode }) {
+  return <div className={cn("mx-auto w-full px-4 py-6 md:px-8", WIDTH[width], className)}>{children}</div>;
+}
+
+/* ---------- Campos ---------- */
+
+export function Field({ label, hint, className, children }: { label: string; hint?: string; className?: string; children: ReactNode }) {
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <Label>{label}</Label>
+      {children}
+      {hint && <p className="text-meta">{hint}</p>}
+    </div>
+  );
+}
+
+/** Select do design system com uma API simples de opções. */
+export function SimpleSelect<T extends string>({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  className,
+  disabled,
+  size,
+}: {
+  value: T | "";
+  onValueChange: (v: T) => void;
+  options: { value: T; label: string }[];
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+  size?: "sm" | "default";
+}) {
+  return (
+    <Select value={value || undefined} onValueChange={(v) => onValueChange(v as T)} disabled={disabled}>
+      <SelectTrigger className={cn("w-full", className)} size={size}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value} value={o.value}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+/* ---------- Nota ---------- */
+
+export function scoreTone(score: number) {
+  if (score >= 85) return "success";
+  if (score >= 70) return "brand";
+  if (score >= 50) return "warning";
+  return "destructive";
+}
+
+export function scoreColor(score: number) {
+  const t = scoreTone(score);
+  return t === "brand" ? "var(--brand-soft)" : `var(--${t})`;
+}
+
+export function ScoreRing({ score, size = 88 }: { score: number; size?: number }) {
+  const r = size / 2 - 5;
   const c = 2 * Math.PI * r;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label={`Nota ${score} de 100`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth="6" />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border)" strokeWidth="5" />
       <circle
         cx={size / 2}
         cy={size / 2}
         r={r}
         fill="none"
         stroke={scoreColor(score)}
-        strokeWidth="6"
+        strokeWidth="5"
         strokeLinecap="round"
         strokeDasharray={`${(score / 100) * c} ${c}`}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
       />
-      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize={size * 0.32} fontWeight="600" fill="var(--foreground)">
+      <text x="50%" y="50%" dominantBaseline="central" textAnchor="middle" fontSize={size * 0.32} className="font-display tnum" fill="var(--foreground)">
         {score}
       </text>
     </svg>
   );
 }
 
-export function ScorePill({ score }: { score?: number }) {
-  if (score === undefined) return <span className="chip">sem nota</span>;
+/** Barra de nota com a cor da faixa (a Progress do DS é monocromática). */
+export function ScoreBar({ score }: { score: number }) {
   return (
-    <span className="chip font-semibold" style={{ color: scoreColor(score), background: "var(--muted)" }}>
-      {score}
-    </span>
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, background: scoreColor(score) }} />
+    </div>
   );
 }
 
-const STATUS_STYLE: Record<PostStatus, string> = {
-  rascunho: "bg-muted text-muted-foreground",
-  em_aprovacao: "bg-yellow-tint text-warning",
-  pronto: "bg-highlight text-link",
-  agendado: "bg-purple-tint text-special",
-  publicado: "bg-brand-tint text-brand-foreground",
-  arquivado: "bg-muted text-subtle-foreground",
-};
-
-export function StatusChip({ status }: { status: PostStatus }) {
-  return <span className={`chip ${STATUS_STYLE[status]}`}>{STATUS_LABEL[status]}</span>;
+export function ScorePill({ score }: { score?: number }) {
+  if (score === undefined) return <Badge variant="muted">sem nota</Badge>;
+  return (
+    <Badge variant="muted" className="tnum min-w-9" style={{ color: scoreColor(score) }}>
+      {score}
+    </Badge>
+  );
 }
 
-const SEV_STYLE: Record<RuleSeverity, string> = {
-  bloqueante: "bg-[#fde8e8] text-destructive",
-  forte: "bg-yellow-tint text-warning",
-  recomendacao: "bg-muted text-muted-foreground",
+/* ---------- Status ---------- */
+
+const STATUS_CLASS: Record<PostStatus, string> = {
+  rascunho: "",
+  em_aprovacao: "bg-warning/10 text-warning",
+  pronto: "bg-notice/10 text-notice",
+  agendado: "bg-special/10 text-special",
+  publicado: "bg-success/10 text-success",
+  arquivado: "opacity-60",
+};
+
+export function StatusBadge({ status }: { status: PostStatus }) {
+  return (
+    <Badge variant="muted" className={STATUS_CLASS[status]}>
+      {STATUS_LABEL[status]}
+    </Badge>
+  );
+}
+
+const SEV_CLASS: Record<RuleSeverity, string> = {
+  bloqueante: "bg-destructive/10 text-destructive",
+  forte: "bg-warning/10 text-warning",
+  recomendacao: "",
 };
 const SEV_LABEL: Record<RuleSeverity, string> = { bloqueante: "Bloqueante", forte: "Forte", recomendacao: "Recomendação" };
 
-export function SeverityChip({ severity }: { severity: RuleSeverity }) {
-  return <span className={`chip ${SEV_STYLE[severity]}`}>{SEV_LABEL[severity]}</span>;
+export function SeverityBadge({ severity }: { severity: RuleSeverity }) {
+  return (
+    <Badge variant="muted" className={SEV_CLASS[severity]}>
+      {SEV_LABEL[severity]}
+    </Badge>
+  );
 }
+
+/* ---------- Utilitários ---------- */
 
 export function latestEvaluation(versions: { evaluation?: Evaluation }[]) {
   for (let i = versions.length - 1; i >= 0; i--) if (versions[i].evaluation) return versions[i].evaluation;
   return undefined;
 }
 
-export function PageHeader({ title, subtitle, children }: { title: string; subtitle?: string; children?: React.ReactNode }) {
-  return (
-    <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border px-4 md:px-8 py-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>}
-      </div>
-      {children}
-    </header>
-  );
-}
-
-export function Tabs<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: { value: T; label: string }[] }) {
-  return (
-    <div className="inline-flex rounded-full bg-secondary p-0.5">
-      {items.map((it) => (
-        <button
-          key={it.value}
-          onClick={() => onChange(it.value)}
-          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${value === it.value ? "bg-card text-foreground shadow-edge" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          {it.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function formatDate(iso?: string) {
   if (!iso) return "";
-  const d = new Date(iso);
-  return d.toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-/** Converte <input type="datetime-local"> para ISO e de volta. */
+/** Converte ISO para o valor de <input type="datetime-local">. */
 export function toLocalInput(iso?: string) {
   if (!iso) return "";
   const d = new Date(iso);

@@ -6,7 +6,7 @@ Ferramenta interna para o time fazer build in public no LinkedIn. Três frentes:
 2. **Biblioteca** — rascunhos, posts em aprovação, agendados e publicados; calendário; lembrete "hora de publicar" com copiar texto; link e métricas do post publicado; banco de ideias.
 3. **Playbook** — guia de escrita, regras do time (editáveis pelo curador e usadas na nota), posts de referência e prompts prontos para colar no Claude/ChatGPT.
 
-O design segue os tokens do design system da deco (cores, fonte Switzer, raios e sombras do decocms.com).
+A interface usa o design system da deco, [`@decocms/ui`](https://designsystem.decocms.com/) (componentes React + tokens Tailwind v4), com ícones `@untitledui/icons`, seguindo as regras de layout do Studio: barra lateral, breadcrumb no cabeçalho, ações à direita e larguras reading/standard/wide.
 
 ## Rodando localmente
 

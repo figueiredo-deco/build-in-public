@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Sidebar } from "@/components/Sidebar";
+import { SidebarInset, SidebarLayout, SidebarProvider } from "@decocms/ui/components/sidebar";
+import { Toaster } from "@decocms/ui/components/sonner";
+import { TooltipProvider } from "@decocms/ui/components/tooltip";
+import { AppSidebar } from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "Build in Public · deco",
@@ -10,11 +13,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">
-        <div className="flex min-h-screen flex-col md:flex-row">
-          <Sidebar />
-          <main className="min-w-0 flex-1">{children}</main>
-        </div>
+      <body className="h-dvh bg-sidebar antialiased">
+        <TooltipProvider delayDuration={300}>
+          <SidebarProvider defaultOpen>
+            <SidebarLayout>
+              <AppSidebar />
+              <SidebarInset className="overflow-y-auto md:max-h-[calc(100dvh-1rem)]">{children}</SidebarInset>
+            </SidebarLayout>
+          </SidebarProvider>
+          <Toaster />
+        </TooltipProvider>
       </body>
     </html>
   );

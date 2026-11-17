@@ -1,5 +1,5 @@
 "use client";
-import { Globe, MessageSquare, Repeat2, Send, ThumbsUp } from "lucide-react";
+import { Globe02, MessageSquare01, Repeat01, Send01, ThumbsUp } from "@untitledui/icons";
 import { useMemo, useState } from "react";
 import { computeCut, type Device } from "@/lib/linkedin";
 import type { Highlight, PostDraft } from "@/lib/types";
@@ -42,7 +42,7 @@ function Rich({ segs }: { segs: Seg[] }) {
         s.mark ? (
           <mark
             key={i}
-            className={`rounded-[3px] px-0.5 ${s.active ? "bg-brand text-brand-foreground" : "bg-yellow-tint text-inherit underline decoration-warning decoration-dotted underline-offset-4"}`}
+            className={`rounded-[3px] px-0.5 ${s.active ? "bg-brand text-brand-foreground" : "bg-warning/15 text-inherit underline decoration-warning decoration-dotted underline-offset-4"}`}
           >
             {s.text}
           </mark>
@@ -70,7 +70,7 @@ export function LinkedInPreview({ draft, device, highlights = [], activeQuote }:
         <div className="min-w-0 leading-tight">
           <div className="text-sm font-semibold text-[#191919]">{profile.name}</div>
           <div className="truncate text-xs text-[#666]">{profile.headline}</div>
-          <div className="flex items-center gap-1 text-xs text-[#666]">agora · <Globe size={11} /></div>
+          <div className="flex items-center gap-1 text-xs text-[#666]">agora · <Globe02 className="size-3" /></div>
         </div>
       </div>
 
@@ -106,9 +106,9 @@ export function LinkedInPreview({ draft, device, highlights = [], activeQuote }:
         <span>{draft.firstComment ? "1 comentário" : "0 comentários"}</span>
       </div>
       <div className="flex justify-around px-2 py-1 text-xs font-semibold text-[#666]">
-        {[ThumbsUp, MessageSquare, Repeat2, Send].map((Icon, i) => (
+        {[ThumbsUp, MessageSquare01, Repeat01, Send01].map((Icon, i) => (
           <span key={i} className="flex items-center gap-1.5 rounded px-3 py-2">
-            <Icon size={16} />
+            <Icon className="size-4" />
             {device === "desktop" && ["Gostei", "Comentar", "Compartilhar", "Enviar"][i]}
           </span>
         ))}
